@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { generateTimetable } from "@/lib/algorithm/scheduler"; // Path needs to be verified
+import { generateTimetable } from "@/lib/algorithm/scheduler";
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function POST() {
     try {

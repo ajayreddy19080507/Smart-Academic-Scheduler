@@ -457,7 +457,13 @@ function isValid(
 }
 
 async function saveSchedule(schedule: Schedule) {
-    require('fs').writeFileSync('debug_schedule.json', JSON.stringify(schedule.bookings, null, 2));
+    try {
+        if (process.env.NODE_ENV !== "production") {
+            require('fs').writeFileSync('debug_schedule.json', JSON.stringify(schedule.bookings, null, 2));
+        }
+    } catch {
+        // Gracefully ignore filesystem write on serverless platforms (e.g. Vercel)
+    }
     await prisma.timetable.createMany({
         data: schedule.bookings.map(b => ({
             day: b.slot.day,
