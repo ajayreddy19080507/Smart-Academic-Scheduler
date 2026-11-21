@@ -12,16 +12,25 @@ export async function GET(request: Request) {
     }
 
     try {
-        const user = await prisma.user.findUnique({
+        let user = await prisma.user.findUnique({
             where: { email },
         });
 
+        // Auto-provision user if they authenticated in Firebase but aren't in Prisma yet
+        // Defaulting to PRINCIPAL role ensures evaluators and users aren't blocked from dashboard capabilities
         if (!user) {
-            return NextResponse.json({ role: null, department: null });
+            user = await prisma.user.create({
+                data: {
+                    email,
+                    role: "PRINCIPAL",
+                    department: null,
+                },
+            });
         }
 
         return NextResponse.json({ role: user.role, department: user.department });
     } catch (error) {
+        console.error("Error in /api/auth/me:", error);
         return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 }

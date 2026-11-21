@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
-import { Loader2, Plus, Trash2, MapPin } from "lucide-react";
+import { Loader2, Plus, Trash2, MapPin, Edit2, X } from "lucide-react";
 
 interface Room {
     id: string;
@@ -23,6 +23,14 @@ export default function ManageRoomsPage() {
     const [type, setType] = useState("THEORY");
     const [capacity, setCapacity] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setName("");
+        setType("THEORY");
+        setCapacity("");
+    };
 
     useEffect(() => {
         fetchRooms();
@@ -54,25 +62,33 @@ export default function ManageRoomsPage() {
         };
 
         try {
-            const res = await fetch("/api/rooms", {
-                method: "POST",
+            const url = editingId ? `/api/rooms/${editingId}` : "/api/rooms";
+            const method = editingId ? "PUT" : "POST";
+            const res = await fetch(url, {
+                method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
             if (res.ok) {
-                setName("");
-                setCapacity("");
+                cancelEdit();
                 fetchRooms();
             } else {
                 const err = await res.json();
-                alert(err.error || "Failed to save room");
+                alert(err.error || `Failed to ${editingId ? "update" : "save"} room`);
             }
         } catch (error) {
             console.error(error);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleEdit = (room: Room) => {
+        setEditingId(room.id);
+        setName(room.name);
+        setType(room.type);
+        setCapacity(room.capacity ? room.capacity.toString() : "");
     };
 
     const handleDelete = async (id: string) => {
@@ -110,7 +126,14 @@ export default function ManageRoomsPage() {
                 {/* Form */}
                 {canEdit && (
                     <GlassCard className="md:col-span-1 h-fit">
-                        <h2 className="text-lg font-semibold mb-4 text-gray-800">Add New Room</h2>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-semibold text-gray-800">{editingId ? "Edit Room" : "Add New Room"}</h2>
+                            {editingId && (
+                                <button type="button" onClick={cancelEdit} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            )}
+                        </div>
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Room Name (e.g., LH-101, CP LAB-1)</label>
@@ -149,8 +172,8 @@ export default function ManageRoomsPage() {
                             </div>
 
                             <Button type="submit" disabled={isSaving} className="w-full justify-center bg-teal-600 hover:bg-teal-700 text-white">
-                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                                Add Room
+                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? <Edit2 className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />)}
+                                {editingId ? "Update Room" : "Add Room"}
                             </Button>
                         </form>
                     </GlassCard>
@@ -175,13 +198,22 @@ export default function ManageRoomsPage() {
                                         </p>
                                     </div>
                                     {canEdit && (
-                                        <Button
-                                            variant="ghost"
-                                            className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 p-2"
-                                            onClick={() => handleDelete(room.id)}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                variant="ghost"
+                                                className="text-blue-500 hover:bg-blue-50 p-2"
+                                                onClick={() => handleEdit(room)}
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                className="text-red-500 hover:bg-red-50 p-2"
+                                                onClick={() => handleDelete(room.id)}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             ))}

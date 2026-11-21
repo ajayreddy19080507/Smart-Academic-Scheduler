@@ -21,15 +21,15 @@ export default function Home() {
           Powered by intelligent algorithms and wrapped in a stunning interface.
         </p>
 
-        <div className="flex gap-4 justify-center pt-4">
-          <Link href="/dashboard">
+        <div className="flex flex-wrap gap-4 justify-center pt-4">
+          <Link href="/login">
             <Button className="h-12 px-8 text-lg rounded-full shadow-blue-500/20 shadow-xl">
-              Get Started
+              Sign In (Demo Ready)
             </Button>
           </Link>
-          <Link href="/login">
-            <Button variant="secondary" className="h-12 px-8 text-lg rounded-full bg-white/60 backdrop-blur-md border-white/40">
-              Admin Login
+          <Link href="/register">
+            <Button variant="secondary" className="h-12 px-8 text-lg rounded-full bg-white/60 backdrop-blur-md border-white/40 hover:bg-white/80">
+              Register New Account
             </Button>
           </Link>
         </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit2, X } from "lucide-react";
 
 interface Section {
     id: string;
@@ -25,6 +25,15 @@ export default function ManageSectionsPage() {
     const [year, setYear] = useState("1");
     const [semester, setSemester] = useState("1");
     const [isSaving, setIsSaving] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setName("");
+        setYear("1");
+        setSemester("1");
+        if (user?.role !== "HOD") setDepartment("");
+    };
 
     useEffect(() => {
         if (user) {
@@ -68,23 +77,33 @@ export default function ManageSectionsPage() {
         };
 
         try {
-            const res = await fetch("/api/sections", {
-                method: "POST",
+            const url = editingId ? `/api/sections/${editingId}` : "/api/sections";
+            const method = editingId ? "PUT" : "POST";
+            const res = await fetch(url, {
+                method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
             if (res.ok) {
-                setName("");
+                cancelEdit();
                 fetchSections();
             } else {
-                alert("Failed to save section");
+                alert(`Failed to ${editingId ? "update" : "save"} section`);
             }
         } catch (error) {
             console.error(error);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleEdit = (section: Section) => {
+        setEditingId(section.id);
+        setName(section.name);
+        setDepartment(section.department);
+        setYear(section.year.toString());
+        setSemester(section.semester.toString());
     };
 
     const handleDelete = async (id: string) => {
@@ -119,7 +138,14 @@ export default function ManageSectionsPage() {
                 {/* Form */}
                 {canEdit && (
                     <GlassCard className="md:col-span-1 h-fit">
-                        <h2 className="text-lg font-semibold mb-4 text-gray-800">Add New Section</h2>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-semibold text-gray-800">{editingId ? "Edit Section" : "Add New Section"}</h2>
+                            {editingId && (
+                                <button type="button" onClick={cancelEdit} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            )}
+                        </div>
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Section Name (e.g., CSE-A)</label>
@@ -175,8 +201,8 @@ export default function ManageSectionsPage() {
                             </div>
 
                             <Button type="submit" disabled={isSaving} className="w-full justify-center">
-                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                                Add Section
+                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? <Edit2 className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />)}
+                                {editingId ? "Update Section" : "Add Section"}
                             </Button>
                         </form>
                     </GlassCard>
@@ -198,13 +224,22 @@ export default function ManageSectionsPage() {
                                         </p>
                                     </div>
                                     {canEdit && (
-                                        <Button
-                                            variant="ghost"
-                                            className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 p-2"
-                                            onClick={() => handleDelete(section.id)}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                variant="ghost"
+                                                className="text-blue-500 hover:bg-blue-50 p-2"
+                                                onClick={() => handleEdit(section)}
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                className="text-red-500 hover:bg-red-50 p-2"
+                                                onClick={() => handleDelete(section.id)}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             ))}
