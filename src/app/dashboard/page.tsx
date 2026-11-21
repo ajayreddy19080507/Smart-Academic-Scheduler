@@ -9,10 +9,17 @@ import { ResetButton } from "@/components/ResetButton";
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
-    // Fetch real stats
-    const facultyCount = await prisma.faculty.count();
-    const sectionsCount = await prisma.section.count();
-    const timetablesCount = await prisma.timetable.count();
+    let facultyCount = 0;
+    let sectionsCount = 0;
+    let timetablesCount = 0;
+
+    try {
+        facultyCount = await prisma.faculty.count();
+        sectionsCount = await prisma.section.count();
+        timetablesCount = await prisma.timetable.count();
+    } catch (error) {
+        console.error("Dashboard server-side stats fetch error:", error);
+    }
 
     return (
         <div className="p-6 md:p-12 space-y-8">
