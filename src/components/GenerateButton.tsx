@@ -13,14 +13,16 @@ export function GenerateButton() {
         setLoading(true);
         try {
             const res = await fetch("/api/generate", { method: "POST" });
-            if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok && data.success !== false) {
                 router.push("/dashboard/timetable");
             } else {
-                alert("Generation failed. Check console.");
+                alert(`Generation failed: ${data.error || "Server could not process constraints."}`);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("Error generating timetable");
+            alert(`Error generating timetable: ${e?.message || e}`);
         } finally {
             setLoading(false);
         }

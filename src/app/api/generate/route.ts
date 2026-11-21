@@ -9,12 +9,12 @@ export async function POST() {
         const result = await generateTimetable();
 
         if (result.success) {
-            return NextResponse.json({ message: "Timetable generated successfully" });
+            return NextResponse.json({ success: true, message: "Timetable generated successfully" });
         } else {
-            return NextResponse.json({ error: result.error || "Generation failed" }, { status: 500 });
+            return NextResponse.json({ success: false, error: result.error || "Generation failed" }, { status: 400 });
         }
-    } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    } catch (error: any) {
+        console.error("API /generate Error:", error);
+        return NextResponse.json({ success: false, error: error?.message || "Internal Server Error" }, { status: 500 });
     }
 }
