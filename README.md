@@ -4,6 +4,14 @@ An automated academic scheduling platform built with Next.js, TypeScript, Tailwi
 
 ---
 
+## 📄 IEEE Conference Publication
+
+An IEEE Conference paper was published on this project:
+- **Publication:** [IEEE Xplore Publication - Document 11744894](https://ieeexplore.ieee.org/abstract/document/11744894)
+- **Paper Link:** https://ieeexplore.ieee.org/abstract/document/11744894
+
+---
+
 ## 🚀 Live Demo & Sample Credentials
 
 When evaluating or previewing the deployed app, you can either **register a new account** on `/register` or use the pre-configured sample credentials below directly on the **Sign In** page (`/login`):
