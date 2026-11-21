@@ -1,10 +1,9 @@
 "use client";
 
-import { prisma } from "@/lib/db";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DAYS } from "@/lib/algorithm/types";
 import { Button } from "@/components/ui/Button";
-import { Trash2, Loader2, RotateCcw } from "lucide-react";
+import { Trash2, Loader2, RotateCcw, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -14,12 +13,29 @@ export default function TimetableView() {
     const [loading, setLoading] = useState(true);
     const [isClearing, setIsClearing] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [lastGeneratedAt, setLastGeneratedAt] = useState<string | null>(null);
 
     const fetchTimetables = async () => {
         setLoading(true);
         try {
-            // Need a new GET API to fetch timetables client-side since this was a Server Component
-            const res = await fetch("/api/timetable/all");
+            // Check if a fresh timetable was generated in this browser session
+            const cached = sessionStorage.getItem("fresh_timetables");
+            const cachedTime = sessionStorage.getItem("timetables_generated_at");
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setSections(parsed);
+                        if (cachedTime) setLastGeneratedAt(cachedTime);
+                        setLoading(false);
+                        return;
+                    }
+                } catch {
+                    // Fall back to server fetch
+                }
+            }
+
+            const res = await fetch("/api/timetable/all", { cache: "no-store" });
             if (res.ok) {
                 const data = await res.json();
                 setSections(data);
@@ -42,6 +58,9 @@ export default function TimetableView() {
         try {
             const res = await fetch("/api/timetable/clear", { method: "DELETE" });
             if (res.ok) {
+                sessionStorage.removeItem("fresh_timetables");
+                sessionStorage.removeItem("timetables_generated_at");
+                setLastGeneratedAt(null);
                 setSections(sections.map(s => ({ ...s, timetables: [] }))); // Optimistic clear
                 alert("Timetable cleared successfully!");
             } else {
@@ -57,15 +76,26 @@ export default function TimetableView() {
     const handleGenerate = async () => {
         setIsGenerating(true);
         try {
-            const res = await fetch("/api/timetable/generate", { method: "POST" });
-            if (res.ok) {
-                await fetchTimetables();
-                alert("Timetable Generated Successfully!");
+            const res = await fetch("/api/generate", { method: "POST" });
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok && data.success !== false) {
+                if (data.sections && Array.isArray(data.sections)) {
+                    sessionStorage.setItem("fresh_timetables", JSON.stringify(data.sections));
+                    const genTime = new Date().toLocaleTimeString();
+                    sessionStorage.setItem("timetables_generated_at", genTime);
+                    setLastGeneratedAt(genTime);
+                    setSections(data.sections);
+                } else {
+                    await fetchTimetables();
+                }
+                alert("New Timetable Generated Successfully!");
             } else {
-                alert("Failed to generate timetable. Check constraints.");
+                alert(`Failed to generate timetable: ${data.error || "Check constraints."}`);
             }
         } catch (e) {
             console.error(e);
+            alert("Error generating timetable. Please try again.");
         } finally {
             setIsGenerating(false);
         }
@@ -73,14 +103,25 @@ export default function TimetableView() {
 
     const canManageTimetable = user?.role === "PRINCIPAL" || user?.role === "HOD";
 
-    if (loading) return <div className="p-6"><Loader2 className="animate-spin text-blue-500" /></div>;
+    if (loading) return <div className="p-6 flex items-center gap-2"><Loader2 className="animate-spin text-blue-500" /> <span>Loading timetables...</span></div>;
 
     return (
         <div className="p-6 space-y-12">
-            <div className="flex justify-between items-center mb-8 border-b pb-4">
-                <h1 className="text-3xl font-bold text-gray-900">Generated Timetables</h1>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+                <div>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-gray-900">Generated Timetables</h1>
+                        {lastGeneratedAt && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                                <Clock className="w-3.5 h-3.5" /> Generated at {lastGeneratedAt}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">Conflict-free schedule matrix across all academic sections.</p>
+                </div>
+
                 {canManageTimetable && (
-                    <div className="flex gap-3">
+                    <div className="flex flex-wrap gap-3">
                         <Button
                             onClick={handleClear}
                             disabled={isClearing || sections.every(s => s.timetables.length === 0)}
@@ -90,7 +131,7 @@ export default function TimetableView() {
                             {isClearing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
                             Clear Timetable
                         </Button>
-                        <Button onClick={handleGenerate} disabled={isGenerating || isClearing} className="bg-blue-600 hover:bg-blue-700">
+                        <Button onClick={handleGenerate} disabled={isGenerating || isClearing} className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
                             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RotateCcw className="w-4 h-4 mr-2" />}
                             Generate Fresh Timetable
                         </Button>
@@ -143,7 +184,7 @@ export default function TimetableView() {
                                                             </div>
                                                         )}
                                                         {entry.room && (
-                                                            <div className="absolute top-1 right-1 text-[10px] text-gray-400">
+                                                            <div className="absolute top-1 right-1 text-[10px] text-gray-400 font-mono">
                                                                 {entry.room.name}
                                                             </div>
                                                         )}

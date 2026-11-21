@@ -16,6 +16,10 @@ export function GenerateButton() {
             const data = await res.json().catch(() => ({}));
 
             if (res.ok && data.success !== false) {
+                if (data.sections && Array.isArray(data.sections)) {
+                    sessionStorage.setItem("fresh_timetables", JSON.stringify(data.sections));
+                    sessionStorage.setItem("timetables_generated_at", new Date().toLocaleTimeString());
+                }
                 router.push("/dashboard/timetable");
             } else {
                 alert(`Generation failed: ${data.error || "Server could not process constraints."}`);

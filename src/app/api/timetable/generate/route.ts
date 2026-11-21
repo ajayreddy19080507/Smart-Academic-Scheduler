@@ -5,30 +5,42 @@ import { prisma } from "@/lib/db";
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-export async function POST(req: Request) {
+export async function POST() {
     try {
-        console.log("API: Triggering timetable generation...");
-        // Fast-fail if not enough data
         const sectionsCount = await prisma.section.count();
         if (sectionsCount === 0) {
-            return NextResponse.json({ error: "No sections to schedule." }, { status: 400 });
+            return NextResponse.json({ success: false, error: "No sections to schedule." }, { status: 400 });
         }
 
         const facultyCount = await prisma.faculty.count();
         if (facultyCount === 0) {
-            return NextResponse.json({ error: "No faculty found." }, { status: 400 });
+            return NextResponse.json({ success: false, error: "No faculty found." }, { status: 400 });
         }
 
         const result = await generateTimetable();
 
         if (result.success) {
-            return NextResponse.json({ success: true, message: "Timetable generated!" });
-        } else {
-            return NextResponse.json({ error: result.error }, { status: 400 });
-        }
+            const sections = await prisma.section.findMany({
+                include: {
+                    timetables: {
+                        include: {
+                            subject: true,
+                            faculty: true,
+                            room: true,
+                        },
+                    },
+                },
+            });
 
+            return NextResponse.json(
+                { success: true, message: "Timetable generated successfully", sections },
+                { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+            );
+        } else {
+            return NextResponse.json({ success: false, error: result.error || "Generation failed" }, { status: 400 });
+        }
     } catch (error: any) {
-        console.error("API /generate Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        console.error("API /timetable/generate Error:", error);
+        return NextResponse.json({ success: false, error: error?.message || "Internal Server Error" }, { status: 500 });
     }
 }

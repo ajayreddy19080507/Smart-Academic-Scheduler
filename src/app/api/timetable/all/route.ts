@@ -11,12 +11,16 @@ export async function GET() {
                     include: {
                         subject: true,
                         faculty: true,
-                        room: true
-                    }
-                }
-            }
+                        room: true,
+                    },
+                },
+            },
         });
-        return NextResponse.json(sections);
+        return NextResponse.json(sections, {
+            headers: {
+                "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            },
+        });
     } catch (e) {
         console.error("Failed to fetch all timetables:", e);
         return NextResponse.json({ error: "Failed to fetch timetables" }, { status: 500 });

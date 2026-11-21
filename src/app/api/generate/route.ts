@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateTimetable } from "@/lib/algorithm/scheduler";
+import { prisma } from "@/lib/db";
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -9,7 +10,23 @@ export async function POST() {
         const result = await generateTimetable();
 
         if (result.success) {
-            return NextResponse.json({ success: true, message: "Timetable generated successfully" });
+            // Fetch updated sections with newly generated timetables from the active container
+            const sections = await prisma.section.findMany({
+                include: {
+                    timetables: {
+                        include: {
+                            subject: true,
+                            faculty: true,
+                            room: true,
+                        },
+                    },
+                },
+            });
+
+            return NextResponse.json(
+                { success: true, message: "Timetable generated successfully", sections },
+                { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+            );
         } else {
             return NextResponse.json({ success: false, error: result.error || "Generation failed" }, { status: 400 });
         }
